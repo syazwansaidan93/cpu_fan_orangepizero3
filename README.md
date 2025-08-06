@@ -138,5 +138,3 @@ To ensure the fan control program starts automatically on boot and runs continuo
   sudo journalctl -u cpu-fan-control.service -f
   
   ```
-
-This README provides a clear overview and instructions for anyone looking to use your CPU fan control program. Let me know if you'd like any other sections or details added!
