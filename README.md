@@ -1,158 +1,142 @@
 # CPU Fan Control for Orange Pi Zero 3
 
-This repository contains a Go language script to control a CPU cooling fan on an Orange Pi Zero 3 based on the CPU temperature. It leverages the `go-gpiocdev` library to interact with the GPIO pins.
-
-## Table of Contents
-
-* [Features](#features)
-* [Prerequisites](#prerequisites)
-* [Installation](#installation)
-* [Usage](#usage)
-  * [Manual Execution](#manual-execution)
-  * [Running as a Systemd Service](#running-as-a-systemd-service)
-* [Configuration](#configuration)
-* [Troubleshooting](#troubleshooting)
-* [License](#license)
+This repository contains a C++ program designed to control a CPU cooling fan on an **Orange Pi Zero 3** based on its temperature. It uses the `libgpiod` library to interact with the GPIO pins.
 
 ## Features
 
-* Monitors CPU temperature from `/sys/class/thermal/thermal_zone2/temp`.
-* Automatically turns a fan ON when the temperature reaches a specified threshold (`FAN_ON_TEMP`).
-* Automatically turns the fan OFF when the temperature drops below another specified threshold (`FAN_OFF_TEMP`).
-* Uses a configurable polling interval for temperature checks.
-* Designed for low resource consumption, suitable for embedded systems like the Orange Pi Zero 3.
-* Graceful shutdown, ensuring the fan is turned off when the script exits.
+* Reads CPU temperature from `/sys/class/thermal/thermal_zone2/temp`.
 
-## Prerequisites
+* Turns the fan ON when the temperature reaches `56.0°C`.
 
-Before you begin, ensure you have the following on your Orange Pi Zero 3:
+* Turns the fan OFF when the temperature drops to `55.5°C`.
 
-* **Go Language:** Version 1.16 or newer is recommended.
-* **`libgpiod`:** The underlying C library for GPIO access. It's usually pre-installed or can be installed via your distribution's package manager (e.g., `sudo apt install libgpiod-dev`).
-* **GPIO Hardware Setup:** A fan connected to GPIO pin 78 on `gpiochip1`. Please verify your specific Orange Pi Zero 3's pinout and GPIO chip/line mapping.
+* Polls the temperature every `2 seconds`.
+
+* Designed for continuous, low-resource background operation.
+
+* Minimal logging (only errors and warnings are printed).
+
+## Requirements
+
+* An **Orange Pi Zero 3** board.
+
+* A cooling fan connected to GPIO pin 78 (as defined by `LINE_NUMBER`).
+
+* Linux operating system (e.g., Armbian, Debian).
+
+* `libgpiod` development libraries installed.
 
 ## Installation
 
-Follow these steps to set up and compile the fan control script.
+### 1. Install `libgpiod` Development Libraries
 
-1.  **Navigate to your working directory:**
-    ```bash
-    cd /home/wan/
-    ```
+On your Orange Pi Zero 3, open a terminal and run:
 
-2.  **Create the project directory and initialize a Go module:**
-    ```bash
-    mkdir -p cpu_fan_control_go
-    cd cpu_fan_control_go
-    go mod init cpu_fan_control_go
-    ```
+```
+sudo apt update
+sudo apt install libgpiod-dev
 
-3.  **Create the `main.go` file:**
-    Save the Go code (from the Canvas document) into `main.go` inside the `cpu_fan_control_go` directory.
+```
 
-4.  **Download the `go-gpiocdev` dependency:**
-    ```bash
-    go get [github.com/warthog618/go-gpiocdev](https://github.com/warthog618/go-gpiocdev)
-    ```
+### 2. Compile the Program
 
-5.  **Build the executable:**
-    ```bash
-    go build -o fan_control
-    ```
-    This will create an executable named `fan_control` in the `cpu_fan_control_go` directory.
+Navigate to the directory containing `cpu_fan_control.cpp` and compile it using `g++`:
+
+```
+g++ -o cpu_fan_control cpu_fan_control.cpp -lgpiod
+
+```
+
+### 3. Make the Executable Runnable
+
+Give execute permissions to the compiled program:
+
+```
+chmod +x cpu_fan_control
+
+```
 
 ## Usage
 
-### Manual Execution
+### Running Manually (for testing)
 
-You can run the script manually from your terminal. This is useful for testing.
+You can run the program directly from your terminal. Since it interacts with hardware, it typically requires root privileges:
 
-```bash
-sudo /home/wan/cpu_fan_control_go/fan_control
 ```
-Press `Ctrl+C` to stop the script.
+sudo ./cpu_fan_control
 
-### Running as a Systemd Service
+```
 
-For automatic startup on boot and robust background operation, it's recommended to run the script as a systemd service.
+Press `Ctrl+C` to stop the program.
 
-1.  **Create the systemd service file:**
-    ```bash
-    sudo nano /etc/systemd/system/cpu-fan-control.service
-    ```
+### Running as a Systemd Service (Recommended for 24/7 operation)
 
-2.  **Add the following content to `cpu-fan-control.service`:**
-    ```ini
-    [Unit]
-    Description=CPU Fan Control Service
-    After=network.target
+To ensure the fan control program starts automatically on boot and runs continuously in the background, set it up as a `systemd` service.
 
-    [Service]
-    Type=simple
-    ExecStart=/home/wan/cpu_fan_control_go/fan_control
-    WorkingDirectory=/home/wan/cpu_fan_control_go
-    Restart=on-failure
-    RestartSec=5s
-    User=root
-    Group=root
-    StandardOutput=journal
-    StandardError=journal
+1. **Create the service file:**
 
-    [Install]
-    WantedBy=multi-user.target
-    ```
+   ```
+   sudo nano /etc/systemd/system/cpu-fan-control.service
+   
+   ```
 
-3.  **Save and close the file.**
+   Paste the following content into the file:
 
-4.  **Reload the systemd daemon:**
-    ```bash
-    sudo systemctl daemon-reload
-    ```
+   ```
+   [Unit]
+   Description=CPU Fan Control Service
+   After=network-online.target
+   
+   [Service]
+   ExecStart=/usr/bin/sudo /home/wan/cpu_fan_control
+   Restart=on-failure
+   User=root
+   Group=root
+   StandardOutput=journal
+   StandardError=journal
+   
+   [Install]
+   WantedBy=multi-user.target
+   
+   ```
 
-5.  **Enable the service to start on boot:**
-    ```bash
-    sudo systemctl enable cpu-fan-control.service
-    ```
+   **Note:** Ensure the `ExecStart` path (`/home/wan/cpu_fan_control`) matches the actual location of your compiled executable.
 
-6.  **Start the service immediately:**
-    ```bash
-    sudo systemctl start cpu-fan-control.service
-    ```
+2. **Reload `systemd` daemon:**
 
-7.  **Check the service status and logs:**
-    ```bash
-    systemctl status cpu-fan-control.service
-    journalctl -u cpu-fan-control.service -f
-    ```
+   ```
+   sudo systemctl daemon-reload
+   
+   ```
 
-## Configuration
+3. **Enable the service (to start on boot):**
 
-You can modify the following constants in the `main.go` file to adjust the fan behavior:
+   ```
+   sudo systemctl enable cpu-fan-control.service
+   
+   ```
 
-* `chipName`: The name of your GPIO chip (e.g., `gpiochip1`).
-* `lineNumber`: The specific GPIO line number connected to your fan (e.g., `78`).
-* `fanOnTemp`: The CPU temperature (in Celsius) at which the fan will turn ON (e.g., `51.0`).
-* `fanOffTemp`: The CPU temperature (in Celsius) at which the fan will turn OFF (e.g., `50.5`).
-* `pollingInterval`: How often the CPU temperature is checked (e.g., `5 * time.Second`).
-* `tempPath`: The path to the CPU temperature file (e.g., `/sys/class/thermal/thermal_zone2/temp`).
+4. **Start the service now:**
 
-Remember to recompile the script (`go build -o fan_control`) after making any changes to `main.go`.
+   ```
+   sudo systemctl start cpu-fan-control.service
+   
+   ```
 
-## Troubleshooting
+### Checking Status and Logs
 
-* **`ERROR: Could not open GPIO chip... Permission denied` or `Could not request GPIO line... Permission denied`:**
-    * Ensure you are running the script with `sudo` or that the systemd service is configured to run as `root`.
-    * Verify that the GPIO chip and line number are correct for your Orange Pi Zero 3.
-    * Check if another process is already using the GPIO line.
+* **Check service status:**
 
-* **`Error: CPU temperature file not found at /sys/class/thermal/thermal_zone2/temp`:**
-    * The path to your CPU temperature sensor might be different. Check `/sys/class/thermal/` on your device to find the correct `thermal_zone` and update the `tempPath` constant in `main.go`.
+  ```
+  sudo systemctl status cpu-fan-control.service
+  
+  ```
 
-* **Fan not turning on/off:**
-    * Double-check your `FAN_ON_TEMP` and `FAN_OFF_TEMP` values.
-    * Verify your fan's wiring to the specified GPIO pin.
-    * Ensure the GPIO line is correctly configured as an output.
+* **View live logs:**
 
-## License
+  ```
+  sudo journalctl -u cpu-fan-control.service -f
+  
+  ```
 
-This project is open-source and available under the [MIT License](LICENSE).
+This README provides a clear overview and instructions for anyone looking to use your CPU fan control program. Let me know if you'd like any other sections or details added!
