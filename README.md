@@ -1,140 +1,84 @@
 # CPU Fan Control for Orange Pi Zero 3
 
-This repository contains a C++ program designed to control a CPU cooling fan on an **Orange Pi Zero 3** based on its temperature. It uses the `libgpiod` library to interact with the GPIO pins.
+This project provides a simple C program to automatically control a cooling fan on an Orange Pi Zero 3 based on the CPU temperature. It reads the temperature from a specified thermal zone and toggles a GPIO pin to turn the fan on or off.
 
-## Features
+### Dependencies
 
-* Reads CPU temperature from `/sys/class/thermal/thermal_zone2/temp`.
+To compile and run this program, you need:
 
-* Turns the fan ON when the temperature reaches `56.0°C`.
+* **GCC**: The C compiler.
 
-* Turns the fan OFF when the temperature drops to `55.5°C`.
+* **`libgpiod-dev`**: The development library for `libgpiod`, which provides a modern interface for GPIO access on Linux systems.
 
-* Polls the temperature every `2 seconds`.
-
-* Designed for continuous, low-resource background operation.
-
-* Minimal logging (only errors and warnings are printed).
-
-## Requirements
-
-* An **Orange Pi Zero 3** board.
-
-* A cooling fan connected to GPIO pin 78 (as defined by `LINE_NUMBER`).
-
-* Linux operating system (e.g., Armbian, Debian).
-
-* `libgpiod` development libraries installed.
-
-## Installation
-
-### 1. Install `libgpiod` Development Libraries
-
-On your Orange Pi Zero 3, open a terminal and run:
+You can install these dependencies on Armbian with the following commands:
 
 ```
-sudo apt update
-sudo apt install libgpiod-dev
+sudo apt-get update
+sudo apt-get install gcc libgpiod-dev
 
 ```
 
-### 2. Compile the Program
+### Compilation
 
-Navigate to the directory containing `cpu_fan_control.cpp` and compile it using `g++`:
-
-```
-g++ -o cpu_fan_control cpu_fan_control.cpp -lgpiod
+Navigate to the directory where you saved the C source file (`fan_control.c`) and compile it using GCC. The `-lgpiod` flag is crucial for linking the `libgpiod` library.
 
 ```
-
-### 3. Make the Executable Runnable
-
-Give execute permissions to the compiled program:
-
-```
-chmod +x cpu_fan_control
+gcc fan_control.c -o fan_control -lgpiod
 
 ```
 
-## Usage
+### Configuration
 
-### Running Manually (for testing)
+You can easily customize the program's behavior by editing the constant values in the source code before compiling.
 
-You can run the program directly from your terminal. Since it interacts with hardware, it typically requires root privileges:
+* `CHIP_NAME`: The name of the GPIO chip.
 
-```
-sudo ./cpu_fan_control
+* `LINE_NUMBER`: The specific GPIO line number connected to your fan.
 
-```
+* `FAN_ON_TEMP`: The temperature in degrees Celsius at which the fan will turn on.
 
-Press `Ctrl+C` to stop the program.
+* `FAN_OFF_TEMP`: The temperature in degrees Celsius at which the fan will turn off.
 
-### Running as a Systemd Service (Recommended for 24/7 operation)
+* `POLLING_INTERVAL_SECONDS`: The interval in seconds between temperature checks.
 
-To ensure the fan control program starts automatically on boot and runs continuously in the background, set it up as a `systemd` service.
+* `TEMP_PATH`: The path to the thermal zone file that reports the CPU temperature.
 
-1. **Create the service file:**
+### Running as a systemd Service
+
+For persistent and automatic operation, it is recommended to run this program as a systemd service.
+
+1. **Create the service file**: Create a new file at `/etc/systemd/system/fan_control.service`.
 
    ```
-   sudo nano /etc/systemd/system/cpu-fan-control.service
+   sudo nano /etc/systemd/system/fan_control.service
    
    ```
 
-   Paste the following content into the file:
+2. **Add the following content**: Ensure the `ExecStart` path points to the correct location of your compiled program.
 
    ```
    [Unit]
    Description=CPU Fan Control Service
-   After=network-online.target
+   After=network.target
    
    [Service]
-   ExecStart=/usr/bin/sudo /home/wan/cpu_fan_control
-   Restart=on-failure
+   Type=simple
    User=root
    Group=root
-   StandardOutput=journal
-   StandardError=journal
+   ExecStart=/home/wan/fan_control/fan_control
+   Restart=always
+   RestartSec=5
    
    [Install]
    WantedBy=multi-user.target
    
    ```
 
-   **Note:** Ensure the `ExecStart` path (`/home/wan/cpu_fan_control`) matches the actual location of your compiled executable.
-
-2. **Reload `systemd` daemon:**
+3. **Enable and start the service**:
 
    ```
    sudo systemctl daemon-reload
+   sudo systemctl enable fan_control.service
+   sudo systemctl start fan_control.service
    
-   ```
-
-3. **Enable the service (to start on boot):**
-
-   ```
-   sudo systemctl enable cpu-fan-control.service
    
-   ```
-
-4. **Start the service now:**
-
-   ```
-   sudo systemctl start cpu-fan-control.service
-   
-   ```
-
-### Checking Status and Logs
-
-* **Check service status:**
-
-  ```
-  sudo systemctl status cpu-fan-control.service
-  
-  ```
-
-* **View live logs:**
-
-  ```
-  sudo journalctl -u cpu-fan-control.service -f
-  
-  ```
