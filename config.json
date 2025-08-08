@@ -1,0 +1,9 @@
+{
+  "chip_name": "gpiochip1",
+  "line_number": 78,
+  "consumer": "cpu_temp_fan_control",
+  "fan_on_temp": 50.0,
+  "fan_off_temp": 49.5,
+  "polling_interval_seconds": 3,
+  "temp_path": "/sys/class/thermal/thermal_zone2/temp"
+}
