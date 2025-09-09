@@ -7,14 +7,14 @@ This project provides a simple C program to automatically control a cooling fan 
 To compile and run this program, you need:
 
 * **GCC**: The C compiler.
-* **`libgpiod-dev`**: The development library for `libgpiod`, which provides a modern interface for GPIO access on Linux systems.
+* 
 * **`libjansson-dev`**: The Jansson library for parsing JSON configuration files.
 
 You can install these dependencies on Armbian with the following commands:
 
 ```
 sudo apt-get update
-sudo apt-get install gcc libgpiod-dev libjansson-dev
+sudo apt-get install gcc libjansson-dev
 ```
 
 ### Configuration
@@ -37,10 +37,10 @@ Here is an example of the `config.json` file:
 
 ### Compilation
 
-Navigate to the directory where you saved the C source file (`fan_control.c`) and compile it using GCC. The `-lgpiod` and `-ljansson` flags are crucial for linking the necessary libraries.
+Navigate to the directory where you saved the C source file (`fan_control.c`) and compile it using GCC. The `-ljansson` flags are crucial for linking the necessary libraries.
 
 ```
-gcc fan_control.c -o fan_control -lgpiod -ljansson
+gcc fan_control.c -o fan_control -ljansson
 ```
 
 ### Usage
