@@ -87,4 +87,5 @@ For persistent and automatic operation, it is recommended to run this program as
     sudo systemctl daemon-reload
     sudo systemctl enable fan_control.service
     sudo systemctl start fan_control.service
+    ```
     
