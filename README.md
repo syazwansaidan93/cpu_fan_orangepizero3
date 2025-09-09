@@ -7,13 +7,13 @@ This project provides a simple C program to automatically control a cooling fan 
 To compile and run this program, you need:
 
 * **GCC**: The C compiler.
-* **`libjansson-dev`**: The Jansson library for parsing JSON configuration files.
+* **`libjansson`**: The Jansson library for parsing JSON configuration files.
 
 You can install these dependencies on Armbian with the following commands:
 
 ```
 sudo apt-get update
-sudo apt-get install gcc libjansson-dev
+sudo apt-get install gcc libjansson
 ```
 
 ### Configuration
